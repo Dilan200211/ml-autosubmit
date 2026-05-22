@@ -22,7 +22,7 @@ COPY bot.py .
 RUN useradd --create-home --uid 10001 botuser
 # Create data directory for SQLite DB
 RUN mkdir -p /app/data && chown -R botuser:botuser /app
-USER botuser
+USER 10001
 
 # Default DB path inside container
 ENV DB_PATH=/app/data/submissions.db
