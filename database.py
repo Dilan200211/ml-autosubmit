@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS queue (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     url             TEXT    NOT NULL,
     campaign_id     TEXT,
+    password        TEXT,
     label           TEXT,
     notes           TEXT,
     priority        INTEGER DEFAULT 0,
@@ -136,6 +137,7 @@ class Database:
         self,
         url: str,
         campaign_id: str | None = None,
+        password: str | None = None,
         label: str | None = None,
         notes: str | None = None,
         priority: int = 0,
@@ -155,10 +157,10 @@ class Database:
         db = self._conn()
         cursor = await db.execute(
             """
-            INSERT INTO queue (url, campaign_id, label, notes, priority)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO queue (url, campaign_id, password, label, notes, priority)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (url, campaign_id, label, notes, priority),
+            (url, campaign_id, password, label, notes, priority),
         )
         await db.commit()
         queue_id: int = cursor.lastrowid  # type: ignore[assignment]
@@ -169,6 +171,7 @@ class Database:
         self,
         urls: list[str],
         campaign_id: str | None = None,
+        password: str | None = None,
     ) -> tuple[int, int]:
         """Add multiple URLs to the queue, silently skipping duplicates.
 
@@ -179,7 +182,7 @@ class Database:
         duplicated = 0
         for url in urls:
             try:
-                await self.add_to_queue(url, campaign_id=campaign_id)
+                await self.add_to_queue(url, campaign_id=campaign_id, password=password)
                 added += 1
             except ValueError:
                 duplicated += 1

@@ -59,6 +59,7 @@ api: MonsterLabAPI = None
 scheduler: SubmissionScheduler = None
 cached_campaigns: list = []  # cached list of active campaigns
 default_campaign_id: str = None  # auto-selected or user-set default
+campaign_passwords: dict = {}  # campaign_id -> password mapping
 
 # Conversation states for bulk mode
 BULK_URLS = 0
@@ -84,6 +85,13 @@ async def refresh_campaigns():
 def get_campaign_id(context: ContextTypes.DEFAULT_TYPE) -> str | None:
     """Get the active campaign ID — user override > global default."""
     return context.user_data.get("default_campaign") or default_campaign_id
+
+
+def get_campaign_password(campaign_id: str | None) -> str | None:
+    """Get the password for a campaign, if set."""
+    if campaign_id:
+        return campaign_passwords.get(campaign_id)
+    return None
 
 
 def build_campaign_keyboard() -> InlineKeyboardMarkup | None:
@@ -155,7 +163,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📤 *Submission:*\n"
         "`/submit <url>` \\- Submit a single clip URL\n"
         "`/bulk` \\- Start bulk submission mode\n"
-        "`/setcampaign <id>` \\- Set default campaign\n\n"
+        "`/setcampaign <id>` \\- Set default campaign\n"
+        "`/setpassword <pw>` \\- Set campaign password\n\n"
         "📊 *Monitoring:*\n"
         "`/status` \\- Today's submission stats\n"
         "`/queue` \\- View pending queue\n"
@@ -232,7 +241,8 @@ async def _process_single_url(update: Update, url: str, context: ContextTypes.DE
 
     try:
         # Add to queue
-        queue_id = await db.add_to_queue(url, campaign_id=campaign_id)
+        campaign_pw = get_campaign_password(campaign_id)
+        queue_id = await db.add_to_queue(url, campaign_id=campaign_id, password=campaign_pw)
         scheduler.notify_new_item()
 
         # Get queue position
@@ -625,6 +635,73 @@ async def cmd_setcampaign(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @authorized
+async def cmd_setpassword(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /setpassword — set password for a campaign.
+
+    Usage:
+        /setpassword <password>           — set for current campaign
+        /setpassword <campaign_id> <pw>   — set for specific campaign
+        /setpassword clear                — clear password for current campaign
+    """
+    global campaign_passwords
+
+    current_camp = get_campaign_id(context)
+
+    if not context.args:
+        # Show current status
+        if current_camp and current_camp in campaign_passwords:
+            await update.message.reply_text(
+                f"🔒 Password is *set* for campaign `{escape_md(current_camp)}`\\.\n\n"
+                f"Use `/setpassword clear` to remove it\\.\n"
+                f"Use `/setpassword YOUR_PASSWORD` to change it\\.",
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
+        else:
+            await update.message.reply_text(
+                f"🔓 No password set for campaign `{escape_md(str(current_camp or 'None'))}`\\.\n\n"
+                f"Usage:\n"
+                f"  `/setpassword YOUR_PASSWORD` — set for current campaign\n"
+                f"  `/setpassword camp_id PASSWORD` — set for specific campaign\n"
+                f"  `/setpassword clear` — remove password",
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
+        return
+
+    if len(context.args) == 1:
+        arg = context.args[0].strip()
+        if arg.lower() == "clear":
+            if current_camp and current_camp in campaign_passwords:
+                del campaign_passwords[current_camp]
+                await update.message.reply_text(
+                    f"🔓 Password cleared for campaign `{escape_md(current_camp)}`\\.",
+                    parse_mode=ParseMode.MARKDOWN_V2,
+                )
+            else:
+                await update.message.reply_text("🔓 No password was set.")
+        else:
+            # Set password for current campaign
+            if not current_camp:
+                await update.message.reply_text("⚠️ No campaign selected. Select one first with /campaigns")
+                return
+            campaign_passwords[current_camp] = arg
+            await update.message.reply_text(
+                f"🔒 Password set for campaign `{escape_md(current_camp)}`\\.\n"
+                f"All submissions to this campaign will include the password\\.",
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
+    elif len(context.args) >= 2:
+        camp_id = context.args[0].strip()
+        pw = " ".join(context.args[1:]).strip()
+        campaign_passwords[camp_id] = pw
+        await update.message.reply_text(
+            f"🔒 Password set for campaign `{escape_md(camp_id)}`\\.",
+            parse_mode=ParseMode.MARKDOWN_V2,
+        )
+
+    logger.info(f"Campaign passwords updated: {len(campaign_passwords)} campaign(s) have passwords")
+
+
+@authorized
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /cancel command — cancel all pending submissions."""
     cancelled = await db.cancel_all_pending()
@@ -787,6 +864,7 @@ async def post_init(application: Application):
         BotCommand("earnings", "Check your earnings"),
         BotCommand("campaigns", "List active campaigns"),
         BotCommand("setcampaign", "Set default campaign"),
+        BotCommand("setpassword", "Set campaign password"),
         BotCommand("ratelimit", "Rate limit status"),
         BotCommand("cancel", "Cancel pending submissions"),
         BotCommand("validate", "Validate API key"),
@@ -888,6 +966,7 @@ def main():
     app.add_handler(CommandHandler("earnings", cmd_earnings))
     app.add_handler(CommandHandler("campaigns", cmd_campaigns))
     app.add_handler(CommandHandler("setcampaign", cmd_setcampaign))
+    app.add_handler(CommandHandler("setpassword", cmd_setpassword))
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(CommandHandler("validate", cmd_validate))
     app.add_handler(CommandHandler("ratelimit", cmd_ratelimit))

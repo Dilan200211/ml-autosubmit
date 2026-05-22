@@ -189,6 +189,7 @@ class SubmissionScheduler:
                 queue_id = item["id"]
                 url = item["url"]
                 campaign_id = item.get("campaign_id")
+                password = item.get("password")
                 label = item.get("label")
                 notes = item.get("notes")
 
@@ -202,6 +203,7 @@ class SubmissionScheduler:
                     result = await self.api.submit_clip(
                         url=url,
                         campaign_id=campaign_id,
+                        password=password,
                         label=label,
                         notes=notes,
                     )
