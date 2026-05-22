@@ -1,0 +1,30 @@
+FROM python:3.12-slim
+
+# Prevent Python from writing .pyc files and enable unbuffered output for logs
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install dependencies first (cached layer)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY config.py .
+COPY monsterlab_api.py .
+COPY database.py .
+COPY scheduler.py .
+COPY utils.py .
+COPY bot.py .
+
+# Create a non-root user for security
+RUN useradd --create-home botuser
+# Create data directory for SQLite DB
+RUN mkdir -p /app/data && chown -R botuser:botuser /app
+USER botuser
+
+# Default DB path inside container
+ENV DB_PATH=/app/data/submissions.db
+
+CMD ["python", "bot.py"]
