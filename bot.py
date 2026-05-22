@@ -11,6 +11,7 @@ import logging
 import os
 import sys
 from datetime import datetime, timezone
+from aiohttp import web
 
 from telegram import Update, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -901,5 +902,33 @@ def main():
     app.run_polling(drop_pending_updates=True)
 
 
+# ─── Health Check Server (for container platforms) ────────────────────────────
+
+async def health_handler(request):
+    """Simple health check endpoint for Choreo / container platforms."""
+    return web.json_response({
+        "status": "ok",
+        "bot": "MonsterLab ClipIt Auto-Submit",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+
+
+async def start_health_server():
+    """Start a lightweight HTTP server on port 8080 for health checks."""
+    health_app = web.Application()
+    health_app.router.add_get("/", health_handler)
+    health_app.router.add_get("/health", health_handler)
+
+    port = int(os.environ.get("PORT", 8080))
+    runner = web.AppRunner(health_app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logger.info(f"Health check server running on port {port}")
+
+
 if __name__ == "__main__":
+    # Start health check server in background, then run the bot
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(start_health_server())
     main()
