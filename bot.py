@@ -651,19 +651,17 @@ async def cmd_setpassword(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Show current status
         if current_camp and current_camp in campaign_passwords:
             await update.message.reply_text(
-                f"🔒 Password is *set* for campaign `{escape_md(current_camp)}`\\.\n\n"
-                f"Use `/setpassword clear` to remove it\\.\n"
-                f"Use `/setpassword YOUR_PASSWORD` to change it\\.",
-                parse_mode=ParseMode.MARKDOWN_V2,
+                f"🔒 Password is SET for campaign: {current_camp}\n\n"
+                f"Use /setpassword clear to remove it.\n"
+                f"Use /setpassword YOUR_PASSWORD to change it.",
             )
         else:
             await update.message.reply_text(
-                f"🔓 No password set for campaign `{escape_md(str(current_camp or 'None'))}`\\.\n\n"
+                f"🔓 No password set for campaign: {current_camp or 'None'}\n\n"
                 f"Usage:\n"
-                f"  `/setpassword YOUR_PASSWORD` — set for current campaign\n"
-                f"  `/setpassword camp_id PASSWORD` — set for specific campaign\n"
-                f"  `/setpassword clear` — remove password",
-                parse_mode=ParseMode.MARKDOWN_V2,
+                f"  /setpassword YOUR_PASSWORD - set for current campaign\n"
+                f"  /setpassword camp_id PASSWORD - set for specific campaign\n"
+                f"  /setpassword clear - remove password",
             )
         return
 
@@ -673,8 +671,7 @@ async def cmd_setpassword(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if current_camp and current_camp in campaign_passwords:
                 del campaign_passwords[current_camp]
                 await update.message.reply_text(
-                    f"🔓 Password cleared for campaign `{escape_md(current_camp)}`\\.",
-                    parse_mode=ParseMode.MARKDOWN_V2,
+                    f"🔓 Password cleared for campaign: {current_camp}",
                 )
             else:
                 await update.message.reply_text("🔓 No password was set.")
@@ -685,17 +682,15 @@ async def cmd_setpassword(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             campaign_passwords[current_camp] = arg
             await update.message.reply_text(
-                f"🔒 Password set for campaign `{escape_md(current_camp)}`\\.\n"
-                f"All submissions to this campaign will include the password\\.",
-                parse_mode=ParseMode.MARKDOWN_V2,
+                f"🔒 Password set for campaign: {current_camp}\n"
+                f"All submissions to this campaign will include the password.",
             )
     elif len(context.args) >= 2:
         camp_id = context.args[0].strip()
         pw = " ".join(context.args[1:]).strip()
         campaign_passwords[camp_id] = pw
         await update.message.reply_text(
-            f"🔒 Password set for campaign `{escape_md(camp_id)}`\\.",
-            parse_mode=ParseMode.MARKDOWN_V2,
+            f"🔒 Password set for campaign: {camp_id}",
         )
 
     logger.info(f"Campaign passwords updated: {len(campaign_passwords)} campaign(s) have passwords")
