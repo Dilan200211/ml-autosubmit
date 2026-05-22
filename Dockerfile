@@ -20,11 +20,9 @@ COPY bot.py .
 
 # Create a non-root user with UID in Choreo's required range (10000-20000)
 RUN useradd --create-home --uid 10001 botuser
-# Create data directory for SQLite DB
-RUN mkdir -p /app/data && chown -R botuser:botuser /app
 USER 10001
 
-# Default DB path inside container
-ENV DB_PATH=/app/data/submissions.db
+# Default DB path — use /tmp which is always writable in containers
+ENV DB_PATH=/tmp/submissions.db
 
 CMD ["python", "bot.py"]
