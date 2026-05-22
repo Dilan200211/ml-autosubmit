@@ -18,8 +18,8 @@ COPY scheduler.py .
 COPY utils.py .
 COPY bot.py .
 
-# Create a non-root user for security
-RUN useradd --create-home botuser
+# Create a non-root user with UID in Choreo's required range (10000-20000)
+RUN useradd --create-home --uid 10001 botuser
 # Create data directory for SQLite DB
 RUN mkdir -p /app/data && chown -R botuser:botuser /app
 USER botuser
