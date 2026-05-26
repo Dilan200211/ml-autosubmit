@@ -1,5 +1,5 @@
 """
-Configuration loader for MonsterLab ClipIt Telegram auto-submit bot.
+Configuration loader for MonsterLab ClipIt Discord auto-submit bot.
 
 Loads settings from environment variables (via .env file) and validates
 that all required values are present and correctly formatted.
@@ -17,17 +17,17 @@ class Config:
     """Immutable application configuration.
 
     Attributes:
-        telegram_bot_token: Telegram Bot API token from @BotFather.
+        discord_bot_token: Discord Bot token from Developer Portal.
         monsterlab_api_key: MonsterLab API key (format: ml_xxxxx).
         monsterlab_base_url: Base URL for the MonsterLab API.
-        authorized_user_id: Telegram user ID authorized to use the bot.
+        authorized_user_id: Discord user ID authorized to use the bot.
         db_path: Path to the SQLite database file.
         max_requests_per_minute: Rate limit — requests per minute (conservative).
         max_requests_per_hour: Rate limit — requests per hour (conservative).
         min_interval_seconds: Minimum seconds between consecutive submissions.
     """
 
-    telegram_bot_token: str
+    discord_bot_token: str
     monsterlab_api_key: str
     monsterlab_base_url: str
     authorized_user_id: int
@@ -59,9 +59,9 @@ def load_config(env_path: str | Path | None = None) -> Config:
     missing: list[str] = []
 
     # --- Required values ---------------------------------------------------
-    telegram_bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-    if not telegram_bot_token:
-        missing.append("TELEGRAM_BOT_TOKEN")
+    discord_bot_token = os.getenv("DISCORD_BOT_TOKEN", "").strip()
+    if not discord_bot_token:
+        missing.append("DISCORD_BOT_TOKEN")
 
     monsterlab_api_key = os.getenv("MONSTERLAB_API_KEY", "").strip()
     if not monsterlab_api_key:
@@ -72,9 +72,9 @@ def load_config(env_path: str | Path | None = None) -> Config:
             f"(got '{monsterlab_api_key[:6]}…')"
         )
 
-    authorized_user_id_raw = os.getenv("AUTHORIZED_USER_ID", "").strip()
+    authorized_user_id_raw = os.getenv("AUTHORIZED_DISCORD_USER_ID", "").strip()
     if not authorized_user_id_raw:
-        missing.append("AUTHORIZED_USER_ID")
+        missing.append("AUTHORIZED_DISCORD_USER_ID")
 
     if missing:
         raise ConfigError(
@@ -87,7 +87,7 @@ def load_config(env_path: str | Path | None = None) -> Config:
         authorized_user_id = int(authorized_user_id_raw)
     except ValueError as exc:
         raise ConfigError(
-            f"AUTHORIZED_USER_ID must be an integer, got '{authorized_user_id_raw}'"
+            f"AUTHORIZED_DISCORD_USER_ID must be an integer, got '{authorized_user_id_raw}'"
         ) from exc
 
     # --- Optional values with defaults -------------------------------------
@@ -108,7 +108,7 @@ def load_config(env_path: str | Path | None = None) -> Config:
     )
 
     return Config(
-        telegram_bot_token=telegram_bot_token,
+        discord_bot_token=discord_bot_token,
         monsterlab_api_key=monsterlab_api_key,
         monsterlab_base_url=monsterlab_base_url,
         authorized_user_id=authorized_user_id,
