@@ -56,6 +56,9 @@ notification_channel_id: int = None  # channel to send submission results
 async def refresh_campaigns():
     """Fetch campaigns from API and cache them. Auto-set default if needed."""
     global cached_campaigns, default_campaign_id
+    if api is None:
+        logger.warning("API client not initialized yet, skipping campaign refresh")
+        return False
     try:
         result = await api.get_campaigns()
         if result.get("success"):
@@ -973,11 +976,14 @@ async def on_ready():
     # Start health check server
     await start_health_server()
 
-    # Initialize database
+    # Initialize database — auto-detect container (Choreo /app is read-only)
     db_path = os.getenv("DB_PATH", "submissions.db")
+    if db_path == "submissions.db" and os.getcwd() == "/app":
+        db_path = "/tmp/submissions.db"
+        logger.info("Container detected, using /tmp for database")
     db = Database(db_path)
     await db.init()
-    logger.info("Database initialized")
+    logger.info(f"Database initialized at {db_path}")
 
     # Initialize API client
     api = MonsterLabAPI(
