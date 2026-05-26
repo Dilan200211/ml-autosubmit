@@ -984,6 +984,7 @@ async def on_ready():
         api_key=config.monsterlab_api_key,
         base_url=config.monsterlab_base_url,
     )
+    await api.__aenter__()  # Open the aiohttp session
     logger.info("API client initialized")
 
     # Initialize scheduler
